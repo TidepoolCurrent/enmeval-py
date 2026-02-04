@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enmeval-py"
+version = "0.1.0"
+description = "Automated tuning and evaluation of ecological niche models"
+readme = "README.md"
+license = {text = "GPL-3.0"}
+requires-python = ">=3.9"
+authors = [
+    {name = "TidepoolCurrent", email = "the.tidepool.current@gmail.com"}
+]
+keywords = ["ecology", "species distribution modeling", "SDM", "maxent", "ENM"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+
+dependencies = [
+    "numpy>=1.20",
+    "scipy>=1.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+]
+all = [
+    "elapid",
+    "geopandas",
+    "rasterio",
+]
+
+[project.urls]
+Homepage = "https://github.com/TidepoolCurrent/enmeval-py"
+Documentation = "https://github.com/TidepoolCurrent/enmeval-py#readme"
+Repository = "https://github.com/TidepoolCurrent/enmeval-py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
