@@ -16,4 +16,10 @@ from .evaluation import (
     calc_auc,
     calc_cbi,
     calc_omission_rate,
+    calc_aicc,
+)
+from .tuning import (
+    enmeval,
+    TuningResult,
+    ENMevalResults,
 )
