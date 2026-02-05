@@ -53,96 +53,72 @@ def calc_boyce(
     fit = np.asarray(fit).flatten()
     obs = np.asarray(obs).flatten()
     
-    # Range of predictions
-    fit_min, fit_max = fit.min(), fit.max()
-    fit_range = fit_max - fit_min
+    # R uses combined min/max of fit and obs
+    mini = min(fit.min(), obs.min())
+    maxi = max(fit.max(), obs.max())
     
-    if fit_range == 0:
+    if maxi - mini == 0:
         return np.nan, np.array([])
     
     # Default window width is 1/10 of range
     if window_w is None:
-        window_w = fit_range / 10
+        window_w = (fit.max() - fit.min()) / 10
+    
+    def boycei(interval, obs, fit):
+        """Calculate P/E ratio for an interval (matches R)."""
+        pi = np.sum((obs >= interval[0]) & (obs <= interval[1])) / len(obs)
+        ei = np.sum((fit >= interval[0]) & (fit <= interval[1])) / len(fit)
+        if ei == 0:
+            return np.nan
+        return round(pi / ei, 10)
     
     if n_class == 0:
-        # Moving window approach (matches ecospat default)
-        # Create evaluation points
-        eval_points = np.linspace(fit_min, fit_max, res)
-        half_window = window_w / 2
-        
-        f_ratios = []
-        valid_points = []
-        
-        for point in eval_points:
-            # Window bounds
-            lower = point - half_window
-            upper = point + half_window
-            
-            # Count fit values in window (expected distribution)
-            n_fit = np.sum((fit >= lower) & (fit < upper))
-            
-            # Count obs values in window (observed presences)
-            n_obs = np.sum((obs >= lower) & (obs < upper))
-            
-            if n_fit > 0:
-                # P/E ratio = (obs proportion) / (fit proportion)
-                # = (n_obs/len(obs)) / (n_fit/len(fit))
-                pe_ratio = (n_obs / len(obs)) / (n_fit / len(fit))
-                f_ratios.append(pe_ratio)
-                valid_points.append(point)
-        
-        f_ratios = np.array(f_ratios)
-        valid_points = np.array(valid_points)
-        
+        # Moving window approach (matches R exactly)
+        vec_mov = np.linspace(mini, maxi - window_w, res + 1)
+        vec_mov[-1] = vec_mov[-1] + 1  # R adds 1 to last element
+        interval = np.column_stack([vec_mov, vec_mov + window_w])
     else:
         # Fixed classes approach
-        bin_edges = np.linspace(fit_min, fit_max, n_class + 1)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        
-        f_ratios = []
-        valid_points = []
-        
-        for i in range(n_class):
-            lower, upper = bin_edges[i], bin_edges[i + 1]
-            
-            n_fit = np.sum((fit >= lower) & (fit < upper))
-            n_obs = np.sum((obs >= lower) & (obs < upper))
-            
-            if n_fit > 0:
-                pe_ratio = (n_obs / len(obs)) / (n_fit / len(fit))
-                f_ratios.append(pe_ratio)
-                valid_points.append(bin_centers[i])
-        
-        f_ratios = np.array(f_ratios)
-        valid_points = np.array(valid_points)
+        vec_mov = np.linspace(mini, maxi, n_class + 1)
+        interval = np.column_stack([vec_mov[:-1], vec_mov[1:]])
     
-    if len(f_ratios) < 3:
-        return np.nan, f_ratios
+    # Calculate F ratios
+    f = np.array([boycei(intv, obs, fit) for intv in interval])
     
-    # Remove successive duplicates if requested
-    if rm_duplicate and len(f_ratios) > 1:
-        keep = [True]
-        for i in range(1, len(f_ratios)):
-            keep.append(f_ratios[i] != f_ratios[i-1])
-        keep = np.array(keep)
-        f_ratios = f_ratios[keep]
-        valid_points = valid_points[keep]
+    # Track which values to keep (non-NaN)
+    to_keep = ~np.isnan(f)
+    f_kept = f[to_keep]
+    vec_kept = vec_mov[to_keep] if n_class == 0 else (interval[to_keep, 0] + interval[to_keep, 1]) / 2
     
-    if len(f_ratios) < 3:
-        return np.nan, f_ratios
+    if len(f_kept) < 3:
+        return np.nan, f
+    
+    # Remove successive duplicates if requested (matches R)
+    if rm_duplicate and len(f_kept) > 1:
+        # R: r <- c(1:length(f))[f != c(f[-1], TRUE)]
+        shifted = np.append(f_kept[1:], np.nan)  # shift left, pad with nan
+        r = f_kept != shifted
+        f_corr = f_kept[r]
+        vec_corr = vec_kept[r]
+    else:
+        f_corr = f_kept
+        vec_corr = vec_kept
+    
+    if len(f_corr) < 3:
+        return np.nan, f
     
     # Calculate correlation
     if method == 'spearman':
-        cbi, _ = spearmanr(valid_points, f_ratios)
+        cbi, _ = spearmanr(f_corr, vec_corr)
     elif method == 'pearson':
-        cbi = np.corrcoef(valid_points, f_ratios)[0, 1]
+        cbi = np.corrcoef(f_corr, vec_corr)[0, 1]
     elif method == 'kendall':
         from scipy.stats import kendalltau
-        cbi, _ = kendalltau(valid_points, f_ratios)
+        cbi, _ = kendalltau(f_corr, vec_corr)
     else:
         raise ValueError(f"Unknown method: {method}")
     
-    return float(cbi), f_ratios
+    return float(cbi), f
 
 
 # Convenience wrapper matching my original API

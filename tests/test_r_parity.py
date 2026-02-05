@@ -69,32 +69,29 @@ class TestAUCParity:
 class TestCBIParity:
     """Test CBI (Continuous Boyce Index) matches R ecospat.boyce()."""
     
-    def test_basic_cbi(self):
-        """Compare CBI to R ecospat.boyce() when available."""
+    def test_cbi_r_parity(self):
+        """Compare CBI to R ecospat.boyce() with hardcoded data."""
         from enmeval.boyce import calc_boyce
         
-        # Test data: good model (presences have higher predictions)
-        np.random.seed(42)
-        fit = np.random.uniform(0, 1, 200)  # All predictions
-        # Presences drawn from higher values
-        obs = np.random.beta(2, 1, 50)
+        # Hardcoded test data (same as R test)
+        fit = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0,
+                        0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95, 0.05])
+        obs = np.array([0.7, 0.8, 0.9, 0.75, 0.85])
         
-        # Python result
-        py_cbi, _ = calc_boyce(fit, obs, res=100)
+        # Python results
+        py_cbi_dup, _ = calc_boyce(fit, obs, res=100, rm_duplicate=True)
+        py_cbi_nodup, _ = calc_boyce(fit, obs, res=100, rm_duplicate=False)
         
-        # For now, just verify it's in valid range and sensible
-        assert -1 <= py_cbi <= 1, f"CBI {py_cbi} out of range"
-        # With presences skewed high, CBI should be positive
-        assert py_cbi > 0, f"Expected positive CBI for good model, got {py_cbi}"
+        # R reference values (computed with ecospat.boyce)
+        # R CBI (rm.dup=TRUE): 0.632
+        # R CBI (rm.dup=FALSE): 0.813
+        r_cbi_dup = 0.632
+        r_cbi_nodup = 0.813
         
-        # TODO: Add R comparison when ecospat is available
-        # r_code = '''
-        # library(ecospat)
-        # fit <- c(...)
-        # obs <- c(...)
-        # result <- ecospat.boyce(fit, obs)
-        # cat("RESULT:", result$Spearman.cor)
-        # '''
+        assert abs(py_cbi_dup - r_cbi_dup) < 0.01, \
+            f"Python CBI (rm_dup) {py_cbi_dup:.3f} != R {r_cbi_dup}"
+        assert abs(py_cbi_nodup - r_cbi_nodup) < 0.01, \
+            f"Python CBI (no rm_dup) {py_cbi_nodup:.3f} != R {r_cbi_nodup}"
 
 
 if __name__ == "__main__":
