@@ -130,7 +130,7 @@ def fit_maxent(train_pres, train_bg, rm, fc):
     """
     X = np.vstack([train_pres, train_bg])
     y = np.array([1]*len(train_pres) + [0]*len(train_bg))
-    model = MaxentModel(tau=rm)  # tau = regularization
+    model = MaxentModel(beta_multiplier=rm)  # beta_multiplier = regularization
     model.fit(X, y)
     return model
 
