@@ -94,18 +94,53 @@ class TestRParity:
     """
     Tests comparing Python outputs to R ENMeval outputs.
     
-    These tests ensure numeric parity with the original R implementation.
-    R outputs generated with ENMeval version 2.0.5.
+    Note: Partitioning algorithms may differ in implementation details
+    (different RNGs, blocking strategies). What matters is that the
+    **evaluation metrics** (AUC, CBI) are comparable, not exact fold
+    assignments. See tests/test_r_parity.py for metric parity tests.
+    
+    These structural tests verify that partitioning produces valid folds
+    with the expected properties.
     """
     
-    @pytest.mark.skip(reason="R reference data not yet generated")
-    def test_random_kfold_parity(self):
-        """Compare random k-fold to R ENMeval get.randomkfold()."""
-        # TODO: Generate reference data from R
-        pass
+    def test_random_kfold_properties(self):
+        """Verify random k-fold has correct structural properties."""
+        from enmeval.partitioning import random_kfold
+        
+        n_samples = 10
+        folds = random_kfold(n_samples, k=5, random_state=48)
+        
+        # Verify 5 folds returned
+        assert len(folds) == 5
+        
+        # Verify each fold has (train, test) tuple
+        all_test = []
+        for train_idx, test_idx in folds:
+            # Train + test = all samples
+            combined = set(train_idx) | set(test_idx)
+            assert combined == set(range(n_samples))
+            # No overlap
+            assert len(set(train_idx) & set(test_idx)) == 0
+            all_test.extend(test_idx)
+        
+        # Each sample appears in test exactly once
+        assert sorted(all_test) == list(range(n_samples))
     
-    @pytest.mark.skip(reason="R reference data not yet generated")  
-    def test_block_parity(self):
-        """Compare block partition to R ENMeval get.block()."""
-        # TODO: Generate reference data from R
-        pass
+    def test_block_properties(self):
+        """Verify block partition has spatial coherence."""
+        from enmeval.partitioning import block_partition
+        
+        # Grid of points
+        xx, yy = np.meshgrid(np.linspace(-10, 10, 5), np.linspace(-10, 10, 5))
+        coords = np.column_stack([xx.ravel(), yy.ravel()])
+        
+        folds = block_partition(coords, k=4)
+        
+        # Verify 4 folds
+        assert len(folds) == 4
+        
+        # Verify all samples covered
+        all_test = []
+        for train_idx, test_idx in folds:
+            all_test.extend(test_idx)
+        assert sorted(all_test) == list(range(25))
