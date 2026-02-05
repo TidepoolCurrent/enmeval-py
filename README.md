@@ -2,30 +2,29 @@
 
 Python implementation of [ENMeval](https://github.com/jamiemkass/ENMeval) - automated tuning and evaluation of ecological niche models.
 
-## Status: ✅ Core Features Complete
+## Status: ⚠️ Pre-alpha - Functional but NOT YET VALIDATED against R implementation
 
 This is a Python port of the R package ENMeval, designed to work with [elapid](https://github.com/earth-chris/elapid) for MaxEnt modeling.
 
-## Validation
+## Testing Status
 
-**Integration with elapid MaxEnt verified** (see `examples/validate_elapid_integration.py`):
+### What's been tested:
+- ✅ **Integration**: Code runs with elapid MaxEnt backend
+- ✅ **Smoke tests**: AUC behaves as expected on synthetic data (see `examples/validate_elapid_integration.py`)
 
-```
-[Test 1] Random data (no signal)
-Best test AUC: 0.435  (expected ~0.5) ✓
+### What has NOT been tested:
+- ❌ **R Parity**: No comparison to R ENMeval outputs on same data
+- ❌ **Reference data**: Not tested with bvariegatus or other published datasets
+- ❌ **Numerical verification**: Results may differ from R ENMeval (not yet quantified)
 
-[Test 2] Synthetic signal 
-Best test AUC: 0.803  (expected >0.6) ✓
+### ⚠️ Use with caution
+Do not use for production research without independent validation against R ENMeval.
 
-[Test 3] Model selection
-RM     FC     AUC_train  AUC_test   Diff    
-0.5    L      0.809      0.803      0.007
-1.0    LQ     0.813      0.802      0.011
-...
-Best by test AUC: rm=0.5, fc=L ✓
-
-All validation tests PASSED
-```
+### Validation Roadmap
+- [ ] Test with bvariegatus reference data (R ENMeval example)
+- [ ] Compare outputs to R ENMeval (AUC, CBI, model selection)
+- [ ] Document numerical differences and acceptable tolerances
+- [ ] Achieve parity or document why differences exist
 
 ## Features
 
